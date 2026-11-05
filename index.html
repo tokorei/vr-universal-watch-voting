@@ -569,6 +569,7 @@
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
         <button class="btn-action-sm" onclick="fetchLiveResults()">🔄 Refresh</button>
+        <button class="btn-action-sm" onclick="exportVotesCSV()">📥 Export CSV</button>
         <span id="voterCountBadge" style="background:#0284C7; color:#FFFFFF; font-size:11px; font-weight:800; padding:2px 8px; border-radius:999px;">0 Votes Cast</span>
       </div>
     </div>
@@ -958,7 +959,13 @@
         });
         try { localStorage.setItem('vru_votes_cache', JSON.stringify(liveStore)); } catch(e) {}
         renderDashboard();
-        showToast('✓ Vote recorded locally!');
+        const fObj = FRONTS.find(f => f.id === selectedFront);
+        const bObj = BACKS.find(b => b.id === selectedBack);
+        const voteTxt = '[VR Universal Watch Vote] ' + voterName + ': Front #' + (fObj ? fObj.num : '') + ' (' + (fObj ? fObj.name : '') + ') | Back #' + (bObj ? bObj.num : '') + ' (' + (bObj ? bObj.name : '') + ') | Strap: ' + strapColor.toUpperCase();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(voteTxt).catch(() => {});
+        }
+        showToast('✓ Vote saved! Summary copied to clipboard.');
         voterInput.value = '';
       });
     }
@@ -1026,6 +1033,25 @@
 
     renderCards();
     fetchLiveResults();
+
+    function exportVotesCSV() {
+      const votes = liveStore.votes || [];
+      if (votes.length === 0) {
+        showToast('No votes recorded yet.');
+        return;
+      }
+      let csv = 'Timestamp,Voter,Front_ID,Back_ID,Strap,Needle,View_Mode\n';
+      votes.forEach(function(v) {
+        csv += '"' + (v.timestamp || '') + '","' + (v.voter || '') + '","' + (v.front || '') + '","' + (v.back || '') + '","' + (v.strap || '') + '","' + (v.needle ? 'Yes' : 'No') + '","' + (v.view_mode || '') + '"\n';
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'VR_Universal_Votes_Export.csv';
+      a.click();
+      showToast('✓ Downloaded VR_Universal_Votes_Export.csv');
+    }
   </script>
 </body>
 </html>
